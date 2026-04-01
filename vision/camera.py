@@ -66,17 +66,25 @@ class Camera:
 
     def start(self):
         """Open the camera and start background capture thread."""
+        print(f"[Camera.start()] Starting initialization...", flush=True)
+        
         if isinstance(self.source, str) and "nvarguscamerasrc" in self.source:
             # CSI camera uses GStreamer — pass CAP_GSTREAMER backend
+            print(f"[Camera.start()] Detected GStreamer pipeline, using CAP_GSTREAMER", flush=True)
             self._cap = cv2.VideoCapture(self.source, cv2.CAP_GSTREAMER)
         else:
+            print(f"[Camera.start()] Using standard VideoCapture", flush=True)
             self._cap = cv2.VideoCapture(self.source)
 
+        print(f"[Camera.start()] VideoCapture created, checking if opened...", flush=True)
         if not self._cap.isOpened():
+            print(f"[Camera.start()] VideoCapture.isOpened() returned False!", flush=True)
             raise RuntimeError(
                 f"[Camera] Could not open source: {self.source}\n"
                 "  → Check the path/device index and try again."
             )
+        
+        print(f"[Camera.start()] Camera opened successfully, setting properties...", flush=True)
 
         # Set resolution and FPS (ignored for GStreamer pipelines)
         self._cap.set(cv2.CAP_PROP_FRAME_WIDTH,  self.width)
@@ -84,17 +92,22 @@ class Camera:
         self._cap.set(cv2.CAP_PROP_FPS,          self.fps)
 
         # Grab one frame synchronously so .read() is never None on first call
+        print(f"[Camera.start()] Attempting to read first frame...", flush=True)
         ret, frame = self._cap.read()
+        print(f"[Camera.start()] First frame read returned: ret={ret}, frame is None: {frame is None}", flush=True)
+        
         if not ret:
+            print(f"[Camera.start()] First frame read FAILED!", flush=True)
             raise RuntimeError("[Camera] Opened but could not read first frame.")
         with self._lock:
             self._frame = frame
 
         # Start background thread
+        print(f"[Camera.start()] Starting background capture thread...", flush=True)
         self._running = True
         self._thread  = threading.Thread(target=self._capture_loop, daemon=True)
         self._thread.start()
-        print(f"[Camera] Started — source: {self.source}")
+        print(f"[Camera] Started — source: {self.source}", flush=True)
 
     def read(self):
         """Return the most recent frame (BGR numpy array), or None if not started."""
