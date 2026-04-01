@@ -155,24 +155,16 @@ class MissionController:
             dy = cy - self.FRAME_CY
             self.control.land_with_correction(dx=dx, dy=dy)
 
-    # Use LiDAR altitude instead of frame count
-    alt = self.control.get_altitude()
-    lidar = self.control.get_lidar_cm()
+        lidar = self.control.get_lidar_cm()
 
-    # Land complete when either:
-    # - Real flight: LiDAR < 10cm (on ground)
-    # - Bench test: frame count > 60 (2 seconds)
-    if lidar > 0 and lidar < 10:
-        print("[Mission] Ground contact confirmed by LiDAR. DONE.")
-        self._transition(MissionState.DONE)
-    elif lidar == 0 and self._frame_count > 60:
-        print("[Mission] Bench test — simulated landing complete.")
-        self._transition(MissionState.DONE)
-
-        # Phase 3: detect ground contact via Pixhawk landed state
-        # For now we just simulate completion after N frames
-        if self._frame_count > 30:
-            print("[Mission] Landed! Mission DONE.")
+        # Land complete when either:
+        # - Real flight: LiDAR < 10cm (on ground)
+        # - Bench test: no LiDAR data and LAND state held > 60 frames
+        if lidar > 0 and lidar < 10:
+            print("[Mission] Ground contact confirmed by LiDAR. DONE.")
+            self._transition(MissionState.DONE)
+        elif lidar == 0 and self._frame_count > 60:
+            print("[Mission] Bench test — simulated landing complete.")
             self._transition(MissionState.DONE)
 
     # ------------------------------------------------------------------
