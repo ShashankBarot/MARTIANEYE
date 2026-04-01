@@ -25,6 +25,7 @@ import cv2
 import sys
 import time
 import logging
+from comms.data_transfer import save_feature_image
 
 logging.basicConfig(
     level=logging.INFO,
@@ -124,6 +125,8 @@ def main():
     # ── 7. Main loop ──────────────────────────────────────────────────────────
     frame_count = 0
     try:
+        marker_detected_count = 0
+        last_saved_time = 0
         while True:
             frame = cam.read()
             if frame is None:
@@ -132,6 +135,21 @@ def main():
 
             # Vision
             detection = detector.process(frame)
+
+            # Detection stability logic
+            if len(detection.aruco_markers) > 0:
+                marker_detected_count += 1
+            else:
+                marker_detected_count = 0
+
+            # Save only if stable + delay between saves
+            current_time = time.time()
+
+            if marker_detected_count > 8 and (current_time - last_saved_time) > 2:
+                print("[Main] Stable marker detected → saving image")
+                save_feature_image(frame, "marker")
+                last_saved_time = current_time
+                marker_detected_count = 0
 
             # LiDAR
             lidar_cm = lidar.get_distance() if lidar else None
